@@ -46,6 +46,9 @@ int priceHistory5MinIndex = 0;
 int BTCpriceHistory30Min[BTC_PRICE_HISTORY_SIZE];
 int priceHistory30MinIndex = 0;
 
+int BTCpriceHistory25Hrs[BTC_PRICE_HISTORY_SIZE];
+int priceHistory25HrsIndex = 0;
+
 void setup_monitor(void){
     /******** TIME ZONE SETTING *****/
 
@@ -376,23 +379,8 @@ void saveBTCpriceHistory()
       BTCpriceHistoryMinutely[i] = price;
       BTCpriceHistory5Min[i] = price;
       BTCpriceHistory30Min[i] = price;
+      BTCpriceHistory25Hrs[i] = price;
     }
-// // Init with FAKE data
-// int price1 = price;
-// int price5 = price;
-// int price30 = price;
-// for (int i = BTC_PRICE_HISTORY_SIZE - 1; i >= 0; i--) {
-//   BTCpriceHistoryMinutely[i] = price1;
-//   price1 += (rand() % 40) - 20;
-
-//   BTCpriceHistory5Min[i] = price5;
-//   price5 += (rand() % 40) - 20;
-
-//   BTCpriceHistory30Min[i] = price30;
-//   if (i < 120)
-//     price30 += (rand() % 40) - 20;
-// }
-// priceHistory30MinIndex = 120; // to start with two graphs and then move to three on the next 5 minutes
   } else {
     BTCpriceHistoryMinutely[priceHistoryMinutelyIndex] = price;
   }
@@ -416,6 +404,19 @@ void saveBTCpriceHistory()
       }
       average /= 6;
       BTCpriceHistory30Min[priceHistory30MinIndex] = average;
+
+      if (priceHistory30MinIndex % 5 == 0) {
+        // consolidate last day data
+        int average = 0;
+        for (int min30Ago=0; min30Ago<6; min30Ago++) {
+          int p = getBTCpriceHistory(min30Ago, BTC_PRICE_HISTORY_GRAPH_30MIN);
+          average += p;
+        }
+        average /= 6;
+        BTCpriceHistory25Hrs[priceHistory25HrsIndex] = average;
+        priceHistory25HrsIndex = (priceHistory25HrsIndex + 1) % BTC_PRICE_HISTORY_SIZE;
+      }
+      
       priceHistory30MinIndex = (priceHistory30MinIndex + 1) % BTC_PRICE_HISTORY_SIZE;
     }
 
@@ -431,6 +432,7 @@ String getBTCpriceHistoryName(int graphID)
   case BTC_PRICE_HISTORY_GRAPH_MIN:   return "5h";
   case BTC_PRICE_HISTORY_GRAPH_5MIN:  return "Day";
   case BTC_PRICE_HISTORY_GRAPH_30MIN: return "Week";
+  case BTC_PRICE_HISTORY_GRAPH_25HRS: return "Month";
   default: return "??";
   }
 }
@@ -439,8 +441,9 @@ String getBTCpriceHistoryUnit(int graphID)
 {
   switch (graphID) {
   case BTC_PRICE_HISTORY_GRAPH_MIN:   return "1h";
-  case BTC_PRICE_HISTORY_GRAPH_5MIN:  return "6h";
+  case BTC_PRICE_HISTORY_GRAPH_5MIN:  return "5h";
   case BTC_PRICE_HISTORY_GRAPH_30MIN: return "1d";
+  case BTC_PRICE_HISTORY_GRAPH_25HRS: return "1w";
   default: return "??";
   }
 }
@@ -451,6 +454,7 @@ int getBTCpriceHistoryIndex(int graphID)
   case BTC_PRICE_HISTORY_GRAPH_MIN:   return priceHistoryMinutelyIndex;
   case BTC_PRICE_HISTORY_GRAPH_5MIN:  return priceHistory5MinIndex;
   case BTC_PRICE_HISTORY_GRAPH_30MIN: return priceHistory30MinIndex;
+  case BTC_PRICE_HISTORY_GRAPH_25HRS: return priceHistory25HrsIndex;
   }
 
   // Error!
@@ -475,6 +479,7 @@ int getBTCpriceHistory(int stepAgo, int graphID)
   case BTC_PRICE_HISTORY_GRAPH_MIN:   price = BTCpriceHistoryMinutely[priceIndex]; break;
   case BTC_PRICE_HISTORY_GRAPH_5MIN:  price = BTCpriceHistory5Min[priceIndex];     break;
   case BTC_PRICE_HISTORY_GRAPH_30MIN: price = BTCpriceHistory30Min[priceIndex];    break;
+  case BTC_PRICE_HISTORY_GRAPH_25HRS: price = BTCpriceHistory25Hrs[priceIndex];    break;
   }
 
   return price;
