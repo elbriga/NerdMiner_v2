@@ -131,6 +131,7 @@ void saveBTCpriceHistory();
 int getBTCpriceHistory(int minutesAgo, int graphID);
 int getBTCpriceHistoryIndex(int graphID);
 String getBTCpriceHistoryName(int graphID);
+String getBTCpriceHistoryUnit(int graphID);
 
 void setup_monitor(void);
 

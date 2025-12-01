@@ -34,7 +34,7 @@ extern bool invertColors;
 extern TSettings Settings;
 bool hasChangedScreen = true;
 
-int priceHistoryGraphColors[2] = { TFT_PURPLE, TFT_RED };
+int priceHistoryGraphColors[3] = { TFT_PURPLE, TFT_RED, TFT_YELLOW };
 
 void getChipInfo(void){
   Serial.print("Chip: ");
@@ -624,13 +624,16 @@ void esp32_2432S028R_BTCpriceHistory(unsigned long mElapsed)
 
   tft.setTextColor(TFT_SKYBLUE);
   tft.drawString(String("$ ")+String(curPrice), 250,   5, FONT2);
-  tft.setTextColor(TFT_WHITE);
 
+  tft.setTextColor(TFT_WHITE);
   tft.drawString(String("$ ")+String(maxPrice),  60,   5, FONT2);
   tft.drawString(String("$ ")+String(minPrice),  60, 220, FONT2);
 
   tft.drawString(String("Last ") + getBTCpriceHistoryName(graphID), 150, 220, FONT2);
   tft.drawString(data.currentTime.c_str(), 260, 220, FONT2);
+
+  tft.setTextColor(TFT_BLACK);
+  tft.drawString(getBTCpriceHistoryUnit(graphID), 250, 180, FONT2);
 }
 
 void esp32_2432S028R_LoadingScreen(void)

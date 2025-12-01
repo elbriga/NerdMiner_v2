@@ -435,6 +435,16 @@ String getBTCpriceHistoryName(int graphID)
   }
 }
 
+String getBTCpriceHistoryUnit(int graphID)
+{
+  switch (graphID) {
+  case BTC_PRICE_HISTORY_GRAPH_MIN:   return "1h";
+  case BTC_PRICE_HISTORY_GRAPH_5MIN:  return "6h";
+  case BTC_PRICE_HISTORY_GRAPH_30MIN: return "1d";
+  default: return "??";
+  }
+}
+
 int getBTCpriceHistoryIndex(int graphID)
 {
   switch (graphID) {
