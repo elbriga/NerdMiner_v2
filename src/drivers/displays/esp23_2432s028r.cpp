@@ -579,17 +579,24 @@ void plotGraph(int graphID, int *minPrice, int *maxPrice)
 
 int oldHistoryIndex = -1;
 int oldGraphID      = -1;
-int show5MinGraph = 0;
+int show5MinGraph  = 0;
+int show30MinGraph = 0;
 void esp32_2432S028R_BTCpriceHistory(unsigned long mElapsed)
 {
   if (!show5MinGraph && getBTCpriceHistoryIndex(BTC_PRICE_HISTORY_GRAPH_5MIN) > 120) {
     // Wait to have some data to show Daily Graph
     show5MinGraph = 1;
   }
+  if (!show30MinGraph && getBTCpriceHistoryIndex(BTC_PRICE_HISTORY_GRAPH_30MIN) > 120) {
+    // Wait to have some data to show Weekly Graph
+    show30MinGraph = 1;
+  }
 
   uint32_t now_millis = millis();
   int graphID = 0;
-  if (show5MinGraph) {
+  if (show30MinGraph) {
+    graphID = ((now_millis / 1000) / 20) % 3; // 3 graphs - 20 secs for each
+  } else if (show5MinGraph) {
     graphID = ((now_millis / 1000) / 20) % 2; // 2 graphs - 20 secs for each
   }
 
