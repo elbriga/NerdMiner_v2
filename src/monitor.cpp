@@ -37,8 +37,11 @@ global_data gData;
 pool_data pData;
 String poolAPIUrl;
 
-int BTCpriceHistory[BTC_PRICE_HISTORY_TOT_MINUTES];
-int priceHistoryIndex = 0;
+int BTCpriceHistoryMinutely[BTC_PRICE_HISTORY_SIZE];
+int priceHistoryMinutelyIndex = 0;
+
+int BTCpriceHistory5Min[BTC_PRICE_HISTORY_SIZE];
+int priceHistory5MinIndex = 0;
 
 void setup_monitor(void){
     /******** TIME ZONE SETTING *****/
@@ -55,15 +58,22 @@ void setup_monitor(void){
     Serial.println("poolAPIUrl: " + poolAPIUrl);
 #endif
 
-  for (int i = 0; i < BTC_PRICE_HISTORY_TOT_MINUTES; i++) {
-    BTCpriceHistory[i] = 0;
-  }
+    for (int i = 0; i < BTC_PRICE_HISTORY_SIZE; i++) {
+      BTCpriceHistoryMinutely[i] = 0;
+      BTCpriceHistory5Min[i] = 0;
+    }
 // Init with FAKE data
-// int price = 91293;
-// for (int i = BTC_PRICE_HISTORY_TOT_MINUTES - 1; i >= 0; i--) {
-//   BTCpriceHistory[i] = price;
+// int price = 84574;
+// int price5 = 84574;
+// for (int i = BTC_PRICE_HISTORY_SIZE - 1; i >= 0; i--) {
+//   BTCpriceHistoryMinutely[i] = price;
 //   price += (rand() % 40) - 20;
+
+//   BTCpriceHistory5Min[i] = price5;
+//   if (i < 120)
+//     price5 += (rand() % 40) - 20;
 // }
+// priceHistory5MinIndex = 120; // to start with one graph and then move to two on the next minute
 
     // Get current price - runMonitor() will call this every minute
     saveBTCpriceHistory();
@@ -368,33 +378,71 @@ void saveBTCpriceHistory()
 {
   int price = getBTCprice();
 
-  if (priceHistoryIndex == 0 && BTCpriceHistory[0] == 0) {
+  if (priceHistoryMinutelyIndex == 0 && BTCpriceHistoryMinutely[0] == 0) {
     // Init all history data to current price
-    for (int i=0; i<BTC_PRICE_HISTORY_TOT_MINUTES; i++) {
-      BTCpriceHistory[i] = price;
+    for (int i=0; i<BTC_PRICE_HISTORY_SIZE; i++) {
+      BTCpriceHistoryMinutely[i] = price;
+      BTCpriceHistory5Min[i] = price;
     }
   } else {
-    BTCpriceHistory[priceHistoryIndex] = price;
+    BTCpriceHistoryMinutely[priceHistoryMinutelyIndex] = price;
   }
 
-  priceHistoryIndex = (priceHistoryIndex + 1) % BTC_PRICE_HISTORY_TOT_MINUTES;
+  if (priceHistoryMinutelyIndex % 5 == 0) {
+    // consolidate last 5min data
+    int average = 0;
+    for (int minutesAgo=0; minutesAgo<5; minutesAgo++) {
+      int p = getBTCpriceHistory(minutesAgo, BTC_PRICE_HISTORY_GRAPH_MIN);
+      average += p;
+    }
+    average /= 5;
+    BTCpriceHistory5Min[priceHistory5MinIndex] = average;
+    priceHistory5MinIndex = (priceHistory5MinIndex + 1) % BTC_PRICE_HISTORY_SIZE;
+  }
+
+  priceHistoryMinutelyIndex = (priceHistoryMinutelyIndex + 1) % BTC_PRICE_HISTORY_SIZE;
 }
 
-int getBTCpriceHistoryIndex()
+String getBTCpriceHistoryName(int graphID)
 {
-  return priceHistoryIndex;
+  switch (graphID) {
+  case BTC_PRICE_HISTORY_GRAPH_MIN:  return "5h";
+  case BTC_PRICE_HISTORY_GRAPH_5MIN: return "Day";
+  default: return "??";
+  }
 }
 
-int getBTCpriceHistory(int minutesAgo)
+int getBTCpriceHistoryIndex(int graphID)
 {
-  if (minutesAgo == 0) return bitcoin_price;
+  switch (graphID) {
+  case BTC_PRICE_HISTORY_GRAPH_MIN:  return priceHistoryMinutelyIndex;
+  case BTC_PRICE_HISTORY_GRAPH_5MIN: return priceHistory5MinIndex;
+  }
 
-  if (minutesAgo >= BTC_PRICE_HISTORY_TOT_MINUTES) minutesAgo = (BTC_PRICE_HISTORY_TOT_MINUTES) - 1;
+  // Error!
+  Serial.println("===>>> invalid graphID");
+  Serial.println(graphID);
+  Serial.println("===>>> invalid graphID");
+  return 0;
+}
 
-  int priceIndex = (priceHistoryIndex - minutesAgo);
-  if (priceIndex < 0) priceIndex = priceIndex + (BTC_PRICE_HISTORY_TOT_MINUTES);
+int getBTCpriceHistory(int stepAgo, int graphID)
+{
+  if (stepAgo == 0) return bitcoin_price;
 
-  return BTCpriceHistory[priceIndex];
+  if (stepAgo >= BTC_PRICE_HISTORY_SIZE) stepAgo = BTC_PRICE_HISTORY_SIZE - 1;
+
+  int priceIndex = getBTCpriceHistoryIndex(graphID) - stepAgo;
+  if (priceIndex < 0)
+    priceIndex = priceIndex + BTC_PRICE_HISTORY_SIZE;
+
+  int price = 0;
+  switch (graphID) {
+  case BTC_PRICE_HISTORY_GRAPH_MIN:  price = BTCpriceHistoryMinutely[priceIndex]; break;
+  case BTC_PRICE_HISTORY_GRAPH_5MIN: price = BTCpriceHistory5Min[priceIndex];     break;
+  }
+
+  return price;
 }
 
 clock_data getClockData(unsigned long mElapsed)

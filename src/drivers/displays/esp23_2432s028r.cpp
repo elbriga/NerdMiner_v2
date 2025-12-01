@@ -34,6 +34,8 @@ extern bool invertColors;
 extern TSettings Settings;
 bool hasChangedScreen = true;
 
+int priceHistoryGraphColors[2] = { TFT_PURPLE, TFT_RED };
+
 void getChipInfo(void){
   Serial.print("Chip: ");
   Serial.println(ESP.getChipModel());
@@ -534,67 +536,94 @@ void drawLine(int sx, int sy, int ex, int ey, int strokeWidth, uint32_t color)
     }
 }
 
-int oldHistoryIndex = -1;
+void plotGraph(int graphID, int *minPrice, int *maxPrice)
+{
+  int graphW = 300, graphH = 170, graphOffsetX = 10, graphOffsetY = 35;
 
+  //BTC_PRICE_HISTORY_GRAPH_MIN
+  *maxPrice = 0;
+  *minPrice = INT_MAX;
+  for (int x=graphW; x >= 0; x--) {
+    int stepAgo = (graphW - x);
+    int price = getBTCpriceHistory(stepAgo, graphID);
+    if (price == 0) break;
+
+    if (price < *minPrice) *minPrice = price;
+    if (price > *maxPrice) *maxPrice = price;
+  }
+
+  if (*maxPrice == 0)
+    return; // No data
+  
+  // Plot graph
+  int range = *maxPrice - *minPrice;
+  if (range == 0) range = 1;
+
+  int oldPrice = getBTCpriceHistory(0, graphID);
+  int oldX = graphW;
+  int oldY = (graphH - (graphH * ((oldPrice - *minPrice)) / range));
+
+  for (int x=graphW; x >= 0; x--) {
+    int stepAgo = (graphW - x);
+    int price = getBTCpriceHistory(stepAgo, graphID);
+    if (price == 0) break;
+
+    int y = (graphH - (graphH * ((price - *minPrice)) / range));
+
+    drawLine(oldX+graphOffsetX, oldY+graphOffsetY, x+graphOffsetX, y+graphOffsetY, 2, priceHistoryGraphColors[graphID]);
+
+    oldX = x;
+    oldY = y;
+  }
+}
+
+int oldHistoryIndex = -1;
+int oldGraphID      = -1;
+int show5MinGraph = 0;
 void esp32_2432S028R_BTCpriceHistory(unsigned long mElapsed)
 {
-  // Detect Screen change
-  int historyIndex = getBTCpriceHistoryIndex();
-  if (historyIndex == oldHistoryIndex) return;
-  oldHistoryIndex = historyIndex;
+  if (!show5MinGraph && getBTCpriceHistoryIndex(BTC_PRICE_HISTORY_GRAPH_5MIN) > 120) {
+    // Wait to have some data to show Daily Graph
+    show5MinGraph = 1;
+  }
 
-  int step = 1;
-  int graphW = 300, graphH = 170, graphOffsetX = 10, graphOffsetY = 35;
-  
-  int oldPrice = getBTCpriceHistory(0);
+  uint32_t now_millis = millis();
+  int graphID = 0;
+  if (show5MinGraph) {
+    graphID = ((now_millis / 1000) / 20) % 2; // 2 graphs - 20 secs for each
+  }
+
+  // Detect Screen change
+  if (graphID == oldGraphID) {
+    int historyIndex = getBTCpriceHistoryIndex(graphID);
+    if (historyIndex == oldHistoryIndex) return;
+    oldHistoryIndex = historyIndex;
+  }
+  oldGraphID = graphID;
+
+  int curPrice = getBTCpriceHistory(0, graphID);
   clock_data data = getClockData(mElapsed);
 
   tft.pushImage(0, 0, BTCgraphScreenWidth, BTCgraphScreenHeight, BTCgraphScreen);
   tft.setTextColor(TFT_WHITE);
 
   int maxPrice = 0, minPrice = INT_MAX;
-  for (int x=graphW; x >= 0; x--) {
-    int stepAgo = (graphW - x) * step;
-    int price = getBTCpriceHistory(stepAgo);
+  plotGraph(graphID, &minPrice, &maxPrice);
 
-    if (price == 0) break;
-
-    if (price < minPrice) minPrice = price;
-    if (price > maxPrice) maxPrice = price;
-  }
-
-  if (maxPrice > 0) {
-
-    tft.setTextColor(TFT_SKYBLUE);
-    tft.drawString(String("$ ")+String(oldPrice), 250,   5, FONT2);
-    tft.setTextColor(TFT_WHITE);
-
-    tft.drawString(String("$ ")+String(maxPrice),  60,   5, FONT2);
-    tft.drawString(String("$ ")+String(minPrice),  60, 220, FONT2);
-
-    tft.drawString("Last 5h", 150, 220, FONT2);
-    tft.drawString(data.currentTime.c_str(), 260, 220, FONT2);
-
-    // Plot graph
-    int range = maxPrice - minPrice;
-    if (range == 0) range = 1;
-    int oldX = graphW;
-    int oldY = (graphH - (graphH * ((oldPrice - minPrice)) / range));
-    for (int x=graphW; x >= 0; x--) {
-      int stepAgo = (graphW - x) * step;
-      int price = getBTCpriceHistory(stepAgo);
-      if (price == 0) break;
-
-      int y = (graphH - (graphH * ((price - minPrice)) / range));
-
-      drawLine(oldX+graphOffsetX, oldY+graphOffsetY, x+graphOffsetX, y+graphOffsetY, 2, TFT_PURPLE);
-
-      oldX = x;
-      oldY = y;
-    }
-  } else {
+  if (maxPrice == 0) {
     tft.drawString("Waiting Data", 200, 220, FONT2);
+    return;
   }
+
+  tft.setTextColor(TFT_SKYBLUE);
+  tft.drawString(String("$ ")+String(curPrice), 250,   5, FONT2);
+  tft.setTextColor(TFT_WHITE);
+
+  tft.drawString(String("$ ")+String(maxPrice),  60,   5, FONT2);
+  tft.drawString(String("$ ")+String(minPrice),  60, 220, FONT2);
+
+  tft.drawString(String("Last ") + getBTCpriceHistoryName(graphID), 150, 220, FONT2);
+  tft.drawString(data.currentTime.c_str(), 260, 220, FONT2);
 }
 
 void esp32_2432S028R_LoadingScreen(void)
