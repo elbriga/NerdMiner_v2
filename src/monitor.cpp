@@ -407,7 +407,7 @@ void saveBTCpriceHistory()
 {
   int price = getBTCprice();
 
-  if (priceHistoryMinutelyIndex == 0 && BTCpriceHistoryMinutely[0] == 0) {
+  if (BTCpriceHistoryMinutely[0] == 0) {
     // Init all history data to current price
     for (int i=0; i<BTC_PRICE_HISTORY_SIZE; i++) {
       BTCpriceHistoryMinutely[i] = price;

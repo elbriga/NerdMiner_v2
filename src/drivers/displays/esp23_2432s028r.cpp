@@ -634,13 +634,13 @@ void esp32_2432S028R_BTCpriceHistory(unsigned long mElapsed)
   clock_data data = getClockData(mElapsed);
 
   tft.pushImage(0, 0, BTCgraphScreenWidth, BTCgraphScreenHeight, BTCgraphScreen);
-  tft.setTextColor(TFT_WHITE);
 
   int maxPrice = 0, minPrice = INT_MAX;
   plotGraph(graphID, &minPrice, &maxPrice);
 
   if (maxPrice == 0) {
-    tft.drawString("Waiting Data", 200, 220, FONT2);
+    tft.setTextColor(TFT_BLACK);
+    tft.drawString("Waiting Data", 130, 220, FONT2);
     return;
   }
 
