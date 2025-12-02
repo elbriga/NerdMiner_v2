@@ -34,7 +34,7 @@ extern bool invertColors;
 extern TSettings Settings;
 bool hasChangedScreen = true;
 
-int priceHistoryGraphColors[4] = { TFT_PURPLE, TFT_RED, TFT_YELLOW, TFT_BLACK };
+int priceHistoryGraphColors[4] = { TFT_PURPLE, TFT_RED, TFT_BLUE, TFT_BLACK };
 
 void getChipInfo(void){
   Serial.print("Chip: ");
