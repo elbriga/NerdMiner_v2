@@ -577,10 +577,10 @@ void plotGraph(int graphID, int *minPrice, int *maxPrice)
   }
 }
 
-String getGraphLegend(int graphID)
+String getGraphLegend(int graphID, int lineIndex)
 {
   char legend[20];
-  unsigned long secondsAgo = getBTCpriceLegendSecsAgo(graphID);
+  unsigned long secondsAgo = getBTCpriceLegendSecsAgo(graphID) * lineIndex;
   unsigned long legendTime = getNow() - secondsAgo;
 
   struct tm *tm = localtime((time_t *)&legendTime);
@@ -659,7 +659,10 @@ void esp32_2432S028R_BTCpriceHistory(unsigned long mElapsed)
   tft.drawString(String("Last ") + getBTCpriceHistoryName(graphID), 130, 220, FONT2);
 
   tft.setTextColor(TFT_BLACK);
-  tft.drawString(getGraphLegend(graphID), 260, 180, FONT2);
+  for (int i=1; i<=5; i++) {
+    int px = 260 - ((i - 1) * 60);
+    tft.drawString(getGraphLegend(graphID, i), px, 180, FONT2);
+  }
 }
 
 void esp32_2432S028R_LoadingScreen(void)
