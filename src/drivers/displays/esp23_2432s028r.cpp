@@ -34,7 +34,7 @@ extern bool invertColors;
 extern TSettings Settings;
 bool hasChangedScreen = true;
 
-int priceHistoryGraphColors[3] = { TFT_PURPLE, TFT_RED, TFT_YELLOW };
+int priceHistoryGraphColors[4] = { TFT_PURPLE, TFT_RED, TFT_YELLOW, TFT_BLACK };
 
 void getChipInfo(void){
   Serial.print("Chip: ");
@@ -577,35 +577,50 @@ void plotGraph(int graphID, int *minPrice, int *maxPrice)
   }
 }
 
-int oldHistoryIndex = -1;
-int oldGraphID      = -1;
-int show5MinGraph  = 0;
-int show30MinGraph = 0;
-int show25HrsGraph = 0;
-void esp32_2432S028R_BTCpriceHistory(unsigned long mElapsed)
+String getGraphLegend(int graphID)
 {
-  if (!show5MinGraph && getBTCpriceHistoryIndex(BTC_PRICE_HISTORY_GRAPH_5MIN) > 120) {
-    // Wait to have some data to show Daily Graph
-    show5MinGraph = 1;
-  }
-  if (!show30MinGraph && getBTCpriceHistoryIndex(BTC_PRICE_HISTORY_GRAPH_30MIN) > 120) {
-    // Wait to have some data to show Weekly Graph
-    show30MinGraph = 1;
-  }
-  if (!show25HrsGraph && getBTCpriceHistoryIndex(BTC_PRICE_HISTORY_GRAPH_25HRS) > 120) {
-    // Wait to have some data to show Monthly Graph
-    show25HrsGraph = 1;
+  char legend[20];
+  unsigned long secondsAgo = getBTCpriceLegendSecsAgo(graphID);
+  unsigned long legendTime = getNow() - secondsAgo;
+
+  struct tm *tm = localtime((time_t *)&legendTime);
+
+  if (secondsAgo < (24 * 60 * 60)) {
+    int hours   = tm->tm_hour;
+    int minutes = tm->tm_min;
+
+    sprintf(legend, "%02d:%02d", hours, minutes);
+  } else {
+    // int year  = tm->tm_year + 1900; // tm_year es el número de años desde 1900
+    int month = tm->tm_mon + 1;    // tm_mon es el mes del año desde 0 (enero) hasta 11 (diciembre)
+    int day   = tm->tm_mday;         // tm_mday es el día del mes
+
+    sprintf(legend, "%02d/%02d", day, month);
   }
 
-  uint32_t now_millis = millis();
-  int graphID = 0;
-  if (show25HrsGraph) {
-    graphID = ((now_millis / 1000) / 20) % 4; // 4 graphs - 20 secs for each
-  } else if (show30MinGraph) {
-    graphID = ((now_millis / 1000) / 20) % 3; // 3 graphs - 20 secs for each
-  } else if (show5MinGraph) {
-    graphID = ((now_millis / 1000) / 20) % 2; // 2 graphs - 20 secs for each
+  return String(legend);
+}
+
+int oldHistoryIndex = -1;
+int oldGraphID      = -1;
+int showGraphs = 1;
+void esp32_2432S028R_BTCpriceHistory(unsigned long mElapsed)
+{
+  if (showGraphs < 2 && getBTCpriceHistoryIndex(BTC_PRICE_HISTORY_GRAPH_5MIN) > 120) {
+    // Wait to have some data to show Daily Graph
+    showGraphs = 2;
   }
+  if (showGraphs < 3 && getBTCpriceHistoryIndex(BTC_PRICE_HISTORY_GRAPH_30MIN) > 120) {
+    // Wait to have some data to show Weekly Graph
+    showGraphs = 3;
+  }
+  if (showGraphs < 4 && getBTCpriceHistoryIndex(BTC_PRICE_HISTORY_GRAPH_25HRS) > 120) {
+    // Wait to have some data to show Monthly Graph
+    showGraphs = 4;
+  }
+
+  uint32_t secsElapsed = millis() / 1000;
+  int graphID = (secsElapsed / 20) % showGraphs; // 20 secs for each graph
 
   // Detect Screen change
   if (graphID == oldGraphID) {
@@ -636,11 +651,15 @@ void esp32_2432S028R_BTCpriceHistory(unsigned long mElapsed)
   tft.drawString(String("$ ")+String(maxPrice),  60,   5, FONT2);
   tft.drawString(String("$ ")+String(minPrice),  60, 220, FONT2);
 
-  tft.drawString(String("Last ") + getBTCpriceHistoryName(graphID), 150, 220, FONT2);
-  tft.drawString(data.currentTime.c_str(), 260, 220, FONT2);
+  String dateDayMonth = data.currentDate.substring(0, 5); // Remove the year
+  tft.drawString(dateDayMonth.c_str(), 210, 220, FONT2);
+  tft.drawString(data.currentTime.c_str(), 280, 220, FONT2);
+
+  tft.setTextColor(priceHistoryGraphColors[graphID]);
+  tft.drawString(String("Last ") + getBTCpriceHistoryName(graphID), 130, 220, FONT2);
 
   tft.setTextColor(TFT_BLACK);
-  tft.drawString(getBTCpriceHistoryUnit(graphID), 250, 180, FONT2);
+  tft.drawString(getGraphLegend(graphID), 260, 180, FONT2);
 }
 
 void esp32_2432S028R_LoadingScreen(void)
