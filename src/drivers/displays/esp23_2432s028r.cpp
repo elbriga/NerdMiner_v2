@@ -614,7 +614,7 @@ void esp32_2432S028R_BTCpriceHistory(unsigned long mElapsed)
     // Wait to have some data to show Weekly Graph
     showGraphs = 3;
   }
-  if (showGraphs < 4 && getBTCpriceHistoryIndex(BTC_PRICE_HISTORY_GRAPH_25HRS) > 120) {
+  if (showGraphs < 4 && getBTCpriceHistoryIndex(BTC_PRICE_HISTORY_GRAPH_WEEKLY) > 120) {
     // Wait to have some data to show Monthly Graph
     showGraphs = 4;
   }

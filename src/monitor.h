@@ -129,7 +129,7 @@ unsigned long getNow(); // Unix timestamp
 #define BTC_PRICE_HISTORY_GRAPH_MIN   0
 #define BTC_PRICE_HISTORY_GRAPH_5MIN  1
 #define BTC_PRICE_HISTORY_GRAPH_30MIN 2
-#define BTC_PRICE_HISTORY_GRAPH_25HRS 3
+#define BTC_PRICE_HISTORY_GRAPH_WEEKLY 3
 void saveBTCpriceHistory();
 int getBTCpriceHistory(int minutesAgo, int graphID);
 int getBTCpriceHistoryIndex(int graphID);
